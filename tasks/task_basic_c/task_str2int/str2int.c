@@ -24,3 +24,4 @@ int str2int(const char *str) {
     return b * a;
 }
     return 0;
+//Daniil Samoylov IY10-18
