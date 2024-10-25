@@ -1,27 +1,37 @@
-#include <stdio.h>
-
-int str2int(const char *str) {
-    int a = 0;
-    int b = 1;
-    
-    // Пропускаем пробелы
-    while (*str == ' ') {
-        str++;
+#include <stdio.h> 
+#include "stdbool.h" 
+#include <assert.h> 
+#include "str2int.h"
+ 
+bool space(char c) { 
+    return (c == ' '); 
+} 
+bool digit(char c) {     
+    return (c >= '0' & c <= '9'); 
+} 
+int str2int(const char *str) { 
+    int result = 0; 
+    int sign = 1;
+    bool flag = 1;
+    while (space(*str)) { 
+        str++;     
+    } 
+    if (*str == '-' || *str == '+') { 
+        sign = (*str == '-') ? -1 : 1;         
+        str++; 
+    } 
+    while (digit(*str)) {       
+        int digit = *str - 0x30;  
+        if (((sign == -1) && (result > (-2147483647 - 1 - digit) / 10)) || ((sign == 1) && (result > (2147483647 - digit) / 10))) { 
+            assert(0==1); 
+        } 
+        result = result * 10 + digit;  
+        flag = 0;      
+        str++; 
+    } 
+    if (flag) {
+        assert(0==1);
     }
-    // Проверка на знак
-    if (*str == '-') {
-        b = -1;
-        str++;
-    } else if (*str == '+') {
-        str++;
-    }
-    // Преобразование символов в число
-    while (*str >= '0' && *str <= '9') {
-        a = a * 10 + (*str - '0');
-        str++;
-    }
-
-    return b * a;
+    return result * sign; 
 }
-    return 0;
 //Daniil Samoylov IY10-18
