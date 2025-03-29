@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <iterator>
 #include <ostream>
 #include <stdexcept>
 #include <utility>
@@ -28,12 +30,13 @@ class simple_vector
 		{
 			other.ptr_ = nullptr;
 		}
-
 		explicit iterator(pointer ptr) : ptr_(ptr) {}
 
 		reference operator*() const { return *ptr_; }
 
-		pointer operator->() { return ptr_; }
+		pointer operator->() noexcept { return ptr_; }
+
+		pointer operator->() const noexcept { return ptr_; }
 
 		iterator& operator=(const iterator& other) = default;
 
@@ -71,6 +74,8 @@ class simple_vector
 		}
 
 		explicit operator bool() const { return ptr_ != nullptr; }
+
+		operator pointer() const noexcept { return ptr_; }
 
 		friend bool operator==(const iterator& lhs, const iterator& rhs)
 		{
@@ -178,35 +183,32 @@ class simple_vector
 
 	iterator begin() noexcept { return iterator(data_.get()); }
 
-	iterator end() noexcept { return iterator(data_.get() + size_); }
-
-	using const_iterator = const T*;
-
 	const_iterator begin() const noexcept { return data_.get(); }
+
+	iterator end() noexcept { return iterator(data_.get() + size_); }
 
 	const_iterator end() const noexcept { return data_.get() + size_; }
 
-	typename iterator::reference operator[](size_t index) noexcept
-	{
-		return data_[index];
-	}
+	using const_iterator = const T*;
 
-	typename const_iterator::reference operator[](size_t index) const noexcept
-	{
-		return data_[index];
-	}
+	const_iterator cbegin() const noexcept { return data_.get(); }
 
-	typename iterator::reference at(size_t index)
+	const_iterator cend() const noexcept { return data_.get() + size_; }
+
+	T& operator[](size_t index) noexcept { return data_[index]; }
+	const T& operator[](size_t index) const noexcept { return data_[index]; }
+
+	T& at(size_t index)
 	{
 		if (index >= size_)
-			throw std::out_of_range("Index out of range");
+			throw std::out_of_range("Out of range");
 		return data_[index];
 	}
 
-	typename const_iterator::reference at(size_t index) const
+	const T& at(size_t index) const
 	{
 		if (index >= size_)
-			throw std::out_of_range("Index out of range");
+			throw std::out_of_range("Out of range");
 		return data_[index];
 	}
 
@@ -251,28 +253,12 @@ class simple_vector
 
 	iterator insert(const_iterator pos, const T& value)
 	{
-		size_t offset = pos - begin();
-		if (size_ == capacity_)
-		{
-			reserve(capacity_ ? capacity_ * 2 : 1);
-		}
-		std::move_backward(begin() + offset, end(), end() + 1);
-		data_[offset] = value;
-		++size_;
-		return begin() + offset;
+		return insert_impl(pos, value);
 	}
 
 	iterator insert(const_iterator pos, T&& value)
 	{
-		size_t offset = pos - begin();
-		if (size_ == capacity_)
-		{
-			reserve(capacity_ ? capacity_ * 2 : 1);
-		}
-		std::move_backward(begin() + offset, end(), end() + 1);
-		data_[offset] = std::move(value);
-		++size_;
-		return begin() + offset;
+		return insert_impl(pos, std::move(value));
 	}
 
 	void push_back(const T& value)
@@ -346,5 +332,20 @@ class simple_vector
 	array_ptr<T> data_;
 	size_t size_ = 0;
 	size_t capacity_ = 0;
+
+	template <typename Arg>
+	iterator insert_impl(const_iterator pos, Arg&& arg)
+	{
+		size_t offset = pos - cbegin();
+		if (size_ == capacity_)
+		{
+			reserve(capacity_ ? capacity_ * 2 : 1);
+		}
+		iterator insert_pos = begin() + offset;
+		std::move_backward(insert_pos, end(), end() + 1);
+		*insert_pos = std::forward<Arg>(arg);
+		++size_;
+		return insert_pos;
+	}
 };
 }  // namespace bmstu
