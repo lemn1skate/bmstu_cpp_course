@@ -135,6 +135,8 @@ class simple_vector
 		pointer ptr_ = nullptr;
 	};
 
+	using const_iterator = const T*;
+
 	simple_vector() noexcept = default;
 
 	~simple_vector() = default;
@@ -174,6 +176,19 @@ class simple_vector
 		return *this;
 	}
 
+	simple_vector& operator=(simple_vector&& other) noexcept
+	{
+		if (this != &other)
+		{
+			data_ = std::move(other.data_);
+			size_ = other.size_;
+			capacity_ = other.capacity_;
+			other.size_ = 0;
+			other.capacity_ = 0;
+		}
+		return *this;
+	}
+
 	simple_vector(size_t size, const T& value = T{})
 		: data_(size ? new T[size] : nullptr), size_(size), capacity_(size)
 	{
@@ -185,30 +200,29 @@ class simple_vector
 
 	const_iterator begin() const noexcept { return data_.get(); }
 
+	const_iterator cbegin() const noexcept { return data_.get(); }
+
 	iterator end() noexcept { return iterator(data_.get() + size_); }
 
 	const_iterator end() const noexcept { return data_.get() + size_; }
 
-	using const_iterator = const T*;
-
-	const_iterator cbegin() const noexcept { return data_.get(); }
-
 	const_iterator cend() const noexcept { return data_.get() + size_; }
 
 	T& operator[](size_t index) noexcept { return data_[index]; }
+
 	const T& operator[](size_t index) const noexcept { return data_[index]; }
 
 	T& at(size_t index)
 	{
 		if (index >= size_)
-			throw std::out_of_range("Out of range");
+			throw std::out_of_range("Index out of range");
 		return data_[index];
 	}
 
 	const T& at(size_t index) const
 	{
 		if (index >= size_)
-			throw std::out_of_range("Out of range");
+			throw std::out_of_range("Index out of range");
 		return data_[index];
 	}
 
@@ -263,20 +277,45 @@ class simple_vector
 
 	void push_back(const T& value)
 	{
-		if (size_ == capacity_)
+		T tmp_value = value;
+		if (size_ >= capacity_)
 		{
-			reserve(capacity_ ? capacity_ * 2 : 1);
+			size_t new_capacity = capacity_ ? capacity_ * 2 : 1;
+			array_ptr<T> new_data(new_capacity);
+			for (size_t i = 0; i < size_; ++i)
+			{
+				new_data[i] = std::move(data_[i]);
+			}
+			new_data[size_] = std::move(tmp_value);
+			data_.swap(new_data);
+			capacity_ = new_capacity;
 		}
-		data_[size_++] = value;
+		else
+		{
+			data_[size_] = std::move(tmp_value);
+		}
+		++size_;
 	}
 
 	void push_back(T&& value)
 	{
-		if (size_ == capacity_)
+		if (size_ >= capacity_)
 		{
-			reserve(capacity_ ? capacity_ * 2 : 1);
+			size_t new_capacity = capacity_ ? capacity_ * 2 : 1;
+			array_ptr<T> new_data(new_capacity);
+			for (size_t i = 0; i < size_; ++i)
+			{
+				new_data[i] = std::move(data_[i]);
+			}
+			new_data[size_] = std::move(value);
+			data_.swap(new_data);
+			capacity_ = new_capacity;
+			++size_;
 		}
-		data_[size_++] = std::move(value);
+		else
+		{
+			data_[size_++] = std::move(value);
+		}
 	}
 
 	void clear() noexcept { size_ = 0; }
@@ -321,11 +360,12 @@ class simple_vector
 		return os;
 	}
 
-	iterator erase(iterator pos)
+	iterator erase(const_iterator pos)
 	{
-		std::move(pos + 1, end(), pos);
+		iterator it = begin() + (pos - cbegin());
+		std::move(it + 1, end(), it);
 		--size_;
-		return pos;
+		return it;
 	}
 
    private:
