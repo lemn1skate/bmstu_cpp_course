@@ -266,16 +266,6 @@ class simple_vector
 		size_ = new_size;
 	}
 
-	iterator insert(const_iterator pos, const T& value)
-	{
-		return insert_impl(pos, value);
-	}
-
-	iterator insert(const_iterator pos, T&& value)
-	{
-		return insert_impl(pos, std::move(value));
-	}
-
 	void push_back(const T& value)
 	{
 		T tmp_value = value;
@@ -331,6 +321,41 @@ class simple_vector
 		}
 	}
 
+	iterator insert(const_iterator pos, const T& value)
+	{
+		size_t offset = pos - cbegin();
+		if (size_ >= capacity_)
+		{
+			size_t new_capacity = capacity_ ? capacity_ * 2 : 1;
+			array_ptr<T> new_data(new_capacity);
+
+			for (size_t i = 0; i < offset; ++i)
+			{
+				new_data[i] = std::move(data_[i]);
+			}
+
+			new_data[offset] = value;
+
+			for (size_t i = offset; i < size_; ++i)
+			{
+				new_data[i + 1] = std::move(data_[i]);
+			}
+
+			data_.swap(new_data);
+			capacity_ = new_capacity;
+		}
+		else
+		{
+			for (size_t i = size_; i > offset; --i)
+			{
+				data_[i] = std::move(data_[i - 1]);
+			}
+			data_[offset] = value;
+		}
+		++size_;
+		return iterator(data_.get() + offset);
+	}
+
 	friend bool operator==(const simple_vector& lhs, const simple_vector& rhs)
 	{
 		return lhs.size_ == rhs.size_ &&
@@ -373,20 +398,5 @@ class simple_vector
 	array_ptr<T> data_;
 	size_t size_ = 0;
 	size_t capacity_ = 0;
-
-	template <typename Arg>
-	iterator insert_impl(const_iterator pos, Arg&& arg)
-	{
-		size_t offset = pos - cbegin();
-		if (size_ == capacity_)
-		{
-			reserve(capacity_ ? capacity_ * 2 : 1);
-		}
-		iterator insert_pos = begin() + offset;
-		std::move_backward(insert_pos, end(), end() + 1);
-		*insert_pos = std::forward<Arg>(arg);
-		++size_;
-		return insert_pos;
-	}
 };
 }  // namespace bmstu
