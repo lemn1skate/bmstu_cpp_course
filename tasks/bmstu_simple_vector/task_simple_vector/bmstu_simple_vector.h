@@ -1,3 +1,4 @@
+//	Copyright 2025 Samoylov Daniil
 #include <algorithm>
 #include <iterator>
 #include <ostream>

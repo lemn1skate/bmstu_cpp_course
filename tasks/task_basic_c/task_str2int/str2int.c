@@ -1,4 +1,4 @@
-// Copyright 2025 Samoylov Daniil
+//	Copyright 2025 Samoylov Daniil
 #include "str2int.h"
 #include <assert.h>
 #include <stdio.h>

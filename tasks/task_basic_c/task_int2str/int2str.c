@@ -1,4 +1,4 @@
-// Copyright 2025 Samoylov Daniil
+//	Copyright 2025 Samoylov Daniil
 #include "int2str.h"
 #include <stdlib.h>
 
