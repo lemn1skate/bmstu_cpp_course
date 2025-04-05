@@ -36,7 +36,7 @@ class basic_string
 		}
 		ptr_[size_] = 0;
 	}
-	
+
 	basic_string(std::initializer_list<T> il)
 	{
 		size_ = il.size();
