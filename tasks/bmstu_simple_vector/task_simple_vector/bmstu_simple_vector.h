@@ -197,17 +197,10 @@ class simple_vector
 		return data_[index];
 	}
 
-	typename iterator::reference at(size_t index)
-	{
-		if (index >= size_)
-			throw std::out_of_range("Index out of range");
-		return data_[index];
-	}
+	typename iterator::reference at(size_t index) { return data_[index]; }
 
 	typename const_iterator::reference at(size_t index) const
 	{
-		if (index >= size_)
-			throw std::out_of_range("Index out of range");
 		return data_[index];
 	}
 
