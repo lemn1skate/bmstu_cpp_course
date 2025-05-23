@@ -1,3 +1,4 @@
+// Copyright 2025 Samoylov Daniil
 #include <cstddef>
 #include <iterator>
 #include <ostream>
