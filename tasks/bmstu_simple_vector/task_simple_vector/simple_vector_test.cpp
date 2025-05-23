@@ -480,3 +480,12 @@ TEST(SimpleVector, PushBackCopyMove3)
 	auto it = v.begin();
 	it = nullptr;
 }
+
+TEST(SimpleVector, PushBackCopyMove4)
+{
+	bmstu::simple_vector<std::string> v = {"blabla", "tripirtpo", "bambinigusini", "bananimonkini", "bobrelogangsterello", "tungrungrungsahur", "balerinacapichina"};
+	bmstu::simple_vector<std::string>::iterator it = v.begin() + v.size() - 1;
+	std::cout << *it << std::endl; // -2
+	// bmstu::simple_vector<std::string>::iterator it2 = v.erase(it);
+	// std::cout << *it2 << std::endl;
+}
