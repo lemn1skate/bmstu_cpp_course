@@ -536,3 +536,16 @@ TEST(BidirectLinkedListTests, from_vector)
 										"string7"s, "end_string"s}),
 			  my_vec);
 }
+
+TEST(BidirectLinkedListTests1, from_vector1)
+{
+  using namespace std;
+  using l = bmstu::list<int>;
+
+  l a{1, 2, 3, 4, 5};
+  l b{6, 7, 8};
+  auto c = a | b;
+  l d{6, 7 , 8, 1, 2, 3, 4, 5};
+  ASSERT_EQ(c, d);
+  ASSERT_EQ(b, l{});
+}
