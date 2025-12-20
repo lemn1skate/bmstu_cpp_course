@@ -1,40 +1,3 @@
-/*
- * ЗАДАНИЕ: Реализация std::map на основе AVL-дерева
- *
- * Цель: Создать полноценный аналог std::map с использованием
- * самобалансирующегося AVL-дерева в качестве внутренней структуры данных.
- *
- * Что нужно реализовать:
- *
- * 1. AVL Tree (avl_balanced_tree):
- *    - insert() - вставка пары ключ-значение с балансировкой
- *    - remove() - удаление по ключу с балансировкой
- *    - find() - поиск узла по ключу
- *    - balance() - балансировка дерева (проверка высот и вызов поворотов)
- *    - Повороты: rotateWithLeftChild, rotateWithRightChild,
- *                doubleWithLeftChild, doubleWithRightChild
- *    - Вспомогательные: heightOfTree(), findMinPtr()
- *
- * 2. Iterator (map::iterator):
- *    - Конструктор для инициализации (найти самый левый узел для begin)
- *    - operator*() - разыменование (вернуть std::pair<const K, V>)
- *    - operator++() - переход к следующему элементу в in-order обходе
- *    - Использовать std::stack для обхода дерева
- *
- * 3. Map (map):
- *    - Все публичные методы уже реализованы и используют AVL дерево
- *    - После реализации AVL дерева и итератора, map будет работать полностью
- *
- * Особенности AVL дерева:
- * - Для каждого узла разность высот левого и правого поддеревьев <= 1
- * - После вставки/удаления может потребоваться 1-2 поворота для балансировки
- * - 4 случая дисбаланса: LL, LR, RR, RL (Left-Left, Left-Right, и т.д.)
- *
- * Тестирование:
- * - Запустите тесты: ./tasks/bmstu_map/bmstu_map
- * - Все 18 тестов должны пройти успешно после полной реализации
- */
-
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -46,7 +9,6 @@
 
 namespace bmstu
 {
-// ==================== AVL Tree Node ====================
 template <typename K, typename V>
 struct tree_node
 {
@@ -62,11 +24,6 @@ struct tree_node
 	tree_node* right;
 };
 
-// ==================== AVL Balanced Tree ====================
-// ЗАДАНИЕ ДЛЯ СТУДЕНТОВ:
-// Реализуйте самобалансирующееся AVL-дерево с поддержкой вставки, удаления и
-// поиска по ключам. Дерево должно автоматически балансироваться после каждой
-// операции.
 template <typename K, typename V>
 class avl_balanced_tree
 {
@@ -76,17 +33,14 @@ class avl_balanced_tree
 
 	void insert(const K& key, const V& value)
 	{
-		this->insert(key, value, root_);
+		root_ = insert(key, value, root_);
 	}
 
-	void remove(const K& key) { this->remove(key, root_); }
+	void remove(const K& key) { root_ = remove(key, root_); }
 
-	tree_node<K, V>* find(const K& key) { return this->find(key, root_); }
+	tree_node<K, V>* find(const K& key) { return find(key, root_); }
 
-	const tree_node<K, V>* find(const K& key) const
-	{
-		return this->find(key, root_);
-	}
+	const tree_node<K, V>* find(const K& key) const { return find(key, root_); }
 
 	bool contains(const K& key) const { return find(key) != nullptr; }
 
@@ -107,95 +61,186 @@ class avl_balanced_tree
 	}
 
    private:
-	tree_node<K, V>* insert(const K& key,
-							const V& value,
-							tree_node<K, V>*& node)
+	uint8_t height(tree_node<K, V>* node) const
 	{
-		// TODO: Реализовать вставку узла в AVL дерево
-		// 1. Если node == nullptr, создать новый узел
-		// 2. Рекурсивно вставить в левое или правое поддерево в зависимости от
-		// ключа
-		// 3. Обновить значение, если ключ уже существует
-		// 4. Вызвать balance(node) для балансировки
-		return nullptr;
+		return node ? node->height : 0;
 	}
 
-	void remove(const K& key, tree_node<K, V>*& node)
+	int getBalance(tree_node<K, V>* node) const
 	{
-		// TODO: Реализовать удаление узла из AVL дерева
-		// 1. Найти узел с заданным ключом
-		// 2. Обработать 4 случая:
-		//    - Узел без детей (лист)
-		//    - Узел с одним ребенком (левым или правым)
-		//    - Узел с двумя детьми (заменить на минимальный из правого
-		//    поддерева)
-		// 3. Декрементировать size_
-		// 4. Вызвать balance(node) для балансировки
+		return node ? height(node->left) - height(node->right) : 0;
+	}
+
+	void updateHeight(tree_node<K, V>* node)
+	{
+		if (node)
+		{
+			node->height =
+				1 + std::max(height(node->left), height(node->right));
+		}
+	}
+
+	tree_node<K, V>* insert(const K& key, const V& value, tree_node<K, V>* node)
+	{
+		if (node == nullptr)
+		{
+			++size_;
+			return new tree_node<K, V>(key, value);
+		}
+
+		if (key < node->key)
+		{
+			node->left = insert(key, value, node->left);
+		}
+		else if (key > node->key)
+		{
+			node->right = insert(key, value, node->right);
+		}
+		else
+		{
+			node->value = value;
+			return node;
+		}
+
+		updateHeight(node);
+		return balance(node);
+	}
+
+	tree_node<K, V>* remove(const K& key, tree_node<K, V>* node)
+	{
+		if (node == nullptr)
+			return nullptr;
+
+		if (key < node->key)
+		{
+			node->left = remove(key, node->left);
+		}
+		else if (key > node->key)
+		{
+			node->right = remove(key, node->right);
+		}
+		else
+		{
+			if ((node->left == nullptr) || (node->right == nullptr))
+			{
+				tree_node<K, V>* temp = node->left ? node->left : node->right;
+
+				if (temp == nullptr)
+				{
+					temp = node;
+					node = nullptr;
+				}
+				else
+				{
+					*node = *temp;
+				}
+
+				delete temp;
+				--size_;
+			}
+			else
+			{
+				tree_node<K, V>* temp = findMinPtr(node->right);
+				node->key = temp->key;
+				node->value = temp->value;
+				node->right = remove(temp->key, node->right);
+			}
+		}
+
+		if (node == nullptr)
+			return nullptr;
+
+		updateHeight(node);
+		return balance(node);
 	}
 
 	tree_node<K, V>* find(const K& key, tree_node<K, V>* node) const
 	{
-		// TODO: Реализовать поиск узла по ключу
-		// Рекурсивно искать в левом или правом поддереве
-		return nullptr;
+		if (node == nullptr)
+			return nullptr;
+
+		if (key < node->key)
+			return find(key, node->left);
+		else if (key > node->key)
+			return find(key, node->right);
+		else
+			return node;
 	}
 
 	tree_node<K, V>* findMinPtr(tree_node<K, V>* node)
 	{
-		// TODO: Найти узел с минимальным ключом в поддереве
-		// Подсказка: идти влево, пока возможно
-		return nullptr;
+		if (node == nullptr)
+			return nullptr;
+
+		while (node->left != nullptr)
+			node = node->left;
+		return node;
 	}
 
-	uint8_t heightOfTree(tree_node<K, V>* t)
+	tree_node<K, V>* rotateWithLeftChild(tree_node<K, V>* k2)
 	{
-		// TODO: Вычислить высоту дерева
-		// Высота пустого дерева = 0
-		// Высота дерева = 1 + max(высота левого, высота правого)
-		return 0;
+		tree_node<K, V>* k1 = k2->left;
+		k2->left = k1->right;
+		k1->right = k2;
+
+		updateHeight(k2);
+		updateHeight(k1);
+
+		return k1;
 	}
 
-	void rotateWithLeftChild(tree_node<K, V>*& k2)
+	tree_node<K, V>* rotateWithRightChild(tree_node<K, V>* k1)
 	{
-		// TODO: Реализовать правый поворот (rotation with left child)
-		// Используется для балансировки Left-Left случая
+		tree_node<K, V>* k2 = k1->right;
+		k1->right = k2->left;
+		k2->left = k1;
+
+		updateHeight(k1);
+		updateHeight(k2);
+
+		return k2;
 	}
 
-	void rotateWithRightChild(tree_node<K, V>*& k1)
+	tree_node<K, V>* doubleWithLeftChild(tree_node<K, V>* k3)
 	{
-		// TODO: Реализовать левый поворот (rotation with right child)
-		// Используется для балансировки Right-Right случая
+		k3->left = rotateWithRightChild(k3->left);
+		return rotateWithLeftChild(k3);
 	}
 
-	void doubleWithLeftChild(tree_node<K, V>*& k3)
+	tree_node<K, V>* doubleWithRightChild(tree_node<K, V>* k1)
 	{
-		// TODO: Реализовать двойной поворот Left-Right
-		// Сначала левый поворот на левом ребенке, затем правый поворот на узле
+		k1->right = rotateWithLeftChild(k1->right);
+		return rotateWithRightChild(k1);
 	}
 
-	void doubleWithRightChild(tree_node<K, V>*& k1)
+	tree_node<K, V>* balance(tree_node<K, V>* node)
 	{
-		// TODO: Реализовать двойной поворот Right-Left
-		// Сначала правый поворот на правом ребенке, затем левый поворот на узле
-	}
+		int balanceFactor = getBalance(node);
 
-	void balance(tree_node<K, V>*& t)
-	{
-		// TODO: Реализовать балансировку AVL дерева
-		// 1. Вычислить разность высот левого и правого поддеревьев
-		// 2. Если разность > 1, выполнить соответствующие повороты:
-		//    - Left-Left: rotateWithLeftChild
-		//    - Left-Right: doubleWithLeftChild
-		//    - Right-Right: rotateWithRightChild
-		//    - Right-Left: doubleWithRightChild
+		if (balanceFactor > 1)
+		{
+			if (getBalance(node->left) >= 0)
+				return rotateWithLeftChild(node);
+			else
+				return doubleWithLeftChild(node);
+		}
+
+		if (balanceFactor < -1)
+		{
+			if (getBalance(node->right) <= 0)
+				return rotateWithRightChild(node);
+			else
+				return doubleWithRightChild(node);
+		}
+
+		return node;
 	}
 
 	void inorder_print(tree_node<K, V>* node)
 	{
 		if (node == nullptr)
-		{
 			return;
-		}
+
 		inorder_print(node->left);
 		std::cout << "[" << node->key << ":" << node->value << "] ";
 		inorder_print(node->right);
@@ -214,28 +259,22 @@ class avl_balanced_tree
 	void print_tree_(tree_node<K, V>* node, int space)
 	{
 		if (node == nullptr)
-		{
 			return;
-		}
+
 		space += 5;
-		this->print_tree_(node->right, space);
+		print_tree_(node->right, space);
+
 		for (int i = 0; i < space; ++i)
-		{
 			std::cout << " ";
-		}
+
 		std::cout << node->key << ":" << node->value << "\n";
-		this->print_tree_(node->left, space);
+		print_tree_(node->left, space);
 	}
 
 	tree_node<K, V>* root_ = nullptr;
 	size_t size_ = 0;
 };
 
-// ==================== Map Class ====================
-// ЗАДАНИЕ ДЛЯ СТУДЕНТОВ:
-// Используя реализованное AVL-дерево, создайте полноценный аналог std::map
-// с поддержкой вставки, удаления, поиска и итерации по элементам в порядке
-// возрастания ключей.
 template <typename K, typename V>
 class map
 {
@@ -244,48 +283,77 @@ class map
 	using mapped_type = V;
 	using value_type = std::pair<const K, V>;
 
-	// ==================== Iterator ====================
-	// ЗАДАНИЕ ДЛЯ СТУДЕНТОВ:
-	// Реализуйте итератор для обхода элементов map в порядке возрастания ключей
-	// (in-order обход AVL дерева). Итератор должен поддерживать операции
-	// инкремента и разыменования.
+
 	struct iterator : public abstract_iterator<iterator,
 											   std::pair<const K, V>,
 											   std::bidirectional_iterator_tag>
 	{
 		tree_node<K, V>* current_;
 		std::stack<tree_node<K, V>*> stack_;
-		mutable typename iterator::value_type pair_cache_;
 
-		iterator() : current_(nullptr), pair_cache_(K{}, V{}) {}
+		iterator() : current_(nullptr) {}
 
 		explicit iterator(tree_node<K, V>* root, bool is_end = false)
-			: current_(nullptr), pair_cache_(K{}, V{})
+			: current_(nullptr)
 		{
-			// TODO: Реализовать инициализацию итератора
-			// Для begin(): нужно найти самый левый узел
-			// Для end(): current_ должен остаться nullptr
+			if (!is_end && root)
+			{
+				tree_node<K, V>* node = root;
+				while (node)
+				{
+					stack_.push(node);
+					node = node->left;
+				}
+
+				if (!stack_.empty())
+				{
+					current_ = stack_.top();
+					stack_.pop();
+				}
+			}
 		}
 
 		typename iterator::reference operator*() const override
 		{
-			// TODO: Реализовать разыменование
-			// Нужно вернуть std::pair<const K, V> с текущим ключом и значением
-			return pair_cache_;
+			static std::pair<const K, V> temp;
+			new (const_cast<std::pair<const K, V>*>(&temp))
+				std::pair<const K, V>(current_->key, current_->value);
+			return temp;
 		}
 
 		typename iterator::pointer operator->() const override
 		{
-			// TODO: Реализовать оператор стрелки
-			return &pair_cache_;
+			return &(**this);
 		}
 
 		iterator& operator++() override
 		{
-			// TODO: Реализовать переход к следующему элементу (in-order)
-			// Подсказка: используйте стек для обхода дерева
+			if (!current_)
+				return *this;
+
+			if (current_->right)
+			{
+				tree_node<K, V>* node = current_->right;
+				while (node)
+				{
+					stack_.push(node);
+					node = node->left;
+				}
+			}
+
+			if (stack_.empty())
+			{
+				current_ = nullptr;
+			}
+			else
+			{
+				current_ = stack_.top();
+				stack_.pop();
+			}
+
 			return *this;
 		}
+
 
 		iterator operator++(int) override
 		{
@@ -296,42 +364,46 @@ class map
 
 		iterator& operator--() override
 		{
-			// Необязательно для bidirectional_iterator в этой реализации
 			return *this;
 		}
 
 		iterator operator--(int) override
 		{
-			// Необязательно для bidirectional_iterator в этой реализации
-			return *this;
+			iterator temp = *this;
+			--(*this);
+			return temp;
 		}
 
 		iterator& operator+=(
 			const typename iterator::difference_type& n) override
 		{
-			// Не требуется для bidirectional_iterator
+			for (int i = 0; i < n; ++i)
+				++(*this);
 			return *this;
 		}
 
 		iterator& operator-=(
 			const typename iterator::difference_type& n) override
 		{
-			// Не требуется для bidirectional_iterator
+			for (int i = 0; i < n; ++i)
+				--(*this);
 			return *this;
 		}
 
 		iterator operator+(
 			const typename iterator::difference_type& n) const override
 		{
-			// Не требуется для bidirectional_iterator
-			return *this;
+			iterator temp = *this;
+			temp += n;
+			return temp;
 		}
 
 		iterator operator-(
 			const typename iterator::difference_type& n) const override
 		{
-			// Не требуется для bidirectional_iterator
-			return *this;
+			iterator temp = *this;
+			temp -= n;
+			return temp;
 		}
 
 		bool operator==(const iterator& other) const override
@@ -349,7 +421,6 @@ class map
 		typename iterator::difference_type operator-(
 			const iterator& other) const override
 		{
-			// Не требуется точное вычисление для bidirectional_iterator
 			return 0;
 		}
 	};
@@ -407,18 +478,14 @@ class map
 		return node->value;
 	}
 
-	// Удаление
 	void erase(const K& key) { tree_.remove(key); }
 
-	// Проверка наличия ключа
 	bool contains(const K& key) const { return tree_.contains(key); }
 
-	// Размер и проверка на пустоту
 	size_t size() const { return tree_.size(); }
 
 	bool empty() const { return tree_.empty(); }
 
-	// Очистка
 	void clear()
 	{
 		tree_.~avl_balanced_tree();
@@ -429,10 +496,9 @@ class map
 
 	void inorder_print() { tree_.inorder_print(); }
 
-	// Итераторы
 	iterator begin() { return iterator(tree_.get_root(), false); }
 
-	iterator end() { return iterator(tree_.get_root(), true); }
+	iterator end() { return iterator(nullptr, true); }
 
    private:
 	avl_balanced_tree<K, V> tree_;
